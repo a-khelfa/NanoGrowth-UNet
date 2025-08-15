@@ -79,11 +79,14 @@ Ce script remplira automatiquement les dossiers data/train et data/val avec des 
 2. Entraînement du Modèle
 Une fois vos données prêtes (réelles ou synthétiques), lancez le script train.py.
 
-'''
-# Lancer l'entraînement avec les paramètres par défaut
-python train.py
 
-# Lancer l'entraînement avec des paramètres personnalisés
+Lancer l'entraînement avec les paramètres par défaut
+'''
+python train.py
+'''
+
+Lancer l'entraînement avec des paramètres personnalisés
+'''
 python train.py --epochs 100 --batch-size 4 --lr 0.0001
 '''
 
@@ -92,11 +95,13 @@ Le modèle entraîné (best_model.pth) et un graphique de la perte seront sauveg
 3. Prédiction (Segmentation/Débruitage)
 Une fois le modèle entraîné, utilisez predict.py pour l'appliquer à de nouvelles images.
 
+Lancer la prédiction sur une image unique
 '''
-# Lancer la prédiction sur une image unique
 python predict.py --model saved_models/best_model.pth --input /chemin/vers/votre/image.png --output /chemin/vers/le/resultat/
+'''
 
-# Lancer la prédiction sur un dossier d'images (ex: les images de validation synthétiques)
+Lancer la prédiction sur un dossier d'images (ex: les images de validation synthétiques)
+'''
 python predict.py --model saved_models/best_model.pth --input data/val/images/ --output results/
 '''
 
