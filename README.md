@@ -1,26 +1,24 @@
-# NanoGrowth-UNet : Segmentation et Analyse Quantitative pour la Microscopie
-NanoGrowth-UNet est une boîte à outils complète pour l'analyse d'images de microscopie, spécialisée dans la croissance de nanoparticules. Ce projet utilise un réseau de neurones U-Net (PyTorch) pour la segmentation sémantique, couplé à des techniques de traitement d'images avancées pour la segmentation d'instance et l'analyse statistique.
+# NanoGrowth-UNet : Segmentation, Suivi et Analyse de Formes pour la Microscopie
+NanoGrowth-UNet est une boîte à outils complète pour l'analyse de vidéos de microscopie, spécialisée dans la croissance de nanoparticules. Ce projet utilise un réseau de neurones U-Net pour la segmentation, des algorithmes de traitement d'images pour l'analyse quantitative, un classificateur de formes et un suivi (tracking) d'objets pour analyser la dynamique des particules au fil du temps.
 
-Le but est de passer d'une image de microscope bruitée à une analyse quantitative complète des particules observées.
+Le workflow complet permet de passer d'une vidéo brute à une analyse détaillée des trajectoires, de la croissance et de la morphologie de chaque particule.
 
 ## Fonctionnalités
-- Segmentation Sémantique : Utilise une architecture U-Net robuste pour générer des masques binaires (particules vs fond).
+- Segmentation Sémantique : Utilise une architecture U-Net robuste pour générer des masques binaires.
 
-- Segmentation d'Instance : Implémente l'algorithme Watershed pour séparer avec précision les particules qui se touchent ou s'agglomèrent.
+- Segmentation d'Instance : Implémente l'algorithme Watershed pour séparer avec précision les particules qui se touchent.
 
-- Analyse Quantitative : Un script d'analyse complet (analysis.py) pour extraire des métriques clés pour chaque particule détectée :
+- Analyse Quantitative et Classification de Formes : Un script d'analyse complet (analysis.py) pour extraire des métriques et classifier la forme de chaque particule détectée (sphérique, nanorod, cube, etc.).
 
- - Aire et périmètre.
+- Suivi Temporel (Tracking) : Un script tracking.py pour suivre les particules à travers les images d'une vidéo, leur assigner un ID unique et enregistrer leurs trajectoires et l'évolution de leurs propriétés.
 
- - Diamètre équivalent.
+- Générateurs de Données Synthétiques Avancés :
 
- - Estimation de volume 3D (en supposant une géométrie sphérique).
+ - generate_synthetic_data.py : Crée des images fixes avec des particules qui se chevauchent.
 
- - Indice de circularité pour l'analyse de forme.
+ - generate_synthetic_video.py : Crée des vidéos réalistes avec des particules de formes variées qui se déplacent, tournent, croissent et décroissent.
 
-- Rapports et Visualisations : Génère automatiquement un rapport statistics.csv et des graphiques de distribution (taille, aire...).
-
-- Générateur de Données Synthétiques : Inclut un script pour créer un jeu de données de test avec des particules qui se chevauchent.
+- Rapports et Visualisations : Génère des fichiers .csv détaillés et des graphiques de distribution (taille, forme...).
 
 ## Structure du Projet
 
@@ -33,9 +31,11 @@ NanoGrowth-UNet/
 ├── utils/                    # Utilitaires (Dataset, transforms)
 │
 ├── generate_synthetic_data.py # Script pour créer des données de test
+├── generate_synthetic_video.py 
 ├── train.py                  # Script pour entraîner le modèle U-Net
 ├── predict.py                # Script pour la segmentation binaire
-├── analysis.py               # NOUVEAU: Script pour l'analyse quantitative
+├── analysis.py               # Script pour l'analyse quantitative
+├── tracking.py
 ├── requirements.txt
 └── README.md
 
@@ -106,7 +106,7 @@ python predict.py --model saved_models/best_model.pth --input data/val/images/ -
 C'est ici que la nouvelle fonctionnalité prend tout son sens. Lancez le script d'analyse sur les masques que vous venez de générer.
 
 '''
-python analysis.py --input predicted_masks/ --output results/
+python analysis.py --input results/ --output analysis_results/
 '''
 
 Ce que fait ce script :
@@ -121,14 +121,50 @@ Ce que fait ce script :
 
 - Il génère des graphiques de distribution (area_distribution.png, etc.) dans results/.
 
+5. Lancement du Suivi sur Vidéo
+- Générez une vidéo synthétique pour le test :
+'''
+python generate_synthetic_video.py --frames 300 --output test_video.avi
+'''
+
+- Lancez le script de suivi en utilisant le modèle entraîné et la vidéo générée :
+'''
+python tracking.py --video test_video.avi --model saved_models/best_model.pth --output-video tracked_results.avi --output-csv tracking_results.csv
+'''
+
+Ce que fait ce script :
+
+- Il lit la vidéo image par image.
+
+- Pour chaque image, il prédit un masque, le segmente en instances, et analyse et classifie la forme de chaque particule.
+
+- Il relie les particules entre les images pour créer des trajectoires.
+
+- Il sauvegarde une nouvelle vidéo tracked_results.avi où chaque particule est annotée avec son ID et sa forme classifiée.
+
+- Il compile toutes les données de suivi (ID, position, taille, forme, etc. pour chaque image) dans un fichier tracking_results.csv.
+
+6. Analyse des Données de Suivi
+Le fichier tracking_results.csv est une mine d'informations. Vous pouvez l'utiliser (par exemple dans un notebook Jupyter avec Pandas) pour étudier :
+
+- La vitesse de croissance moyenne par type de forme.
+
+- Les trajectoires et le type de mouvement (ex: calcul du déplacement quadratique moyen).
+
+- L'évolution de la distribution des formes au cours du temps.
+
 ## Améliorations Futures Possibles
 
 Voici quelques pistes pour aller encore plus loin :
 
-- Tracking Temporel : Analyser la séquence vidéo complète pour suivre les particules individuelles au fil du temps, mesurer leur vitesse de croissance, et détecter les événements de fusion.
+- Algorithme de Tracking plus Robuste : Remplacer le suivi par centroïde simple par des méthodes plus avancées comme le filtre de Kalman pour mieux prédire les positions et gérer les occultations.
+
+- Analyse de Trajectoire Avancée : Calculer le déplacement quadratique moyen (MSD) à partir des trajectoires pour caractériser le type de mouvement (ex: Brownien, dirigé).
+
+- Optimisation des Performances : Le traitement vidéo peut être lent. Optimiser le pipeline (ex: traitement par lots, parallélisation) pour accélérer l'analyse de vidéos longues.
 
 - Modèles d'Instance Segmentation End-to-End : Remplacer le pipeline U-Net + Watershed par un modèle plus avancé comme Mask R-CNN ou StarDist, qui sont spécifiquement conçus pour la segmentation d'instance et peuvent donner de meilleurs résultats.
 
-- Classification de Formes : Utiliser les métriques de forme (circularité, ellipticité) pour entraîner un petit classifieur (ex: SVM, Random Forest) capable de catégoriser automatiquement les particules (sphérique, bâtonnet, agrégat...).
+- Analyse de Fusion/Fragmentation : Développer une logique dans le script de suivi pour détecter explicitement les événements où des particules fusionnent ou se brisent.
 
 - Interface Utilisateur : Développer une interface graphique simple (avec Gradio ou Streamlit) pour permettre de charger une image et d'obtenir la segmentation et l'analyse de manière interactive.
