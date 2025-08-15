@@ -1,48 +1,41 @@
-# NanoGrowth-UNet
-NanoGrowth-UNet est une boîte à outils basée sur Python et PyTorch, conçue pour l'analyse de vidéos de microscopie électronique en transmission (TEM) de la croissance de nanoparticules. Elle met en œuvre une architecture U-Net pour deux tâches cruciales : le débruitage d'images et la segmentation de nanoparticules.
+# NanoGrowth-UNet : Segmentation et Analyse Quantitative pour la Microscopie
+NanoGrowth-UNet est une boîte à outils complète pour l'analyse d'images de microscopie, spécialisée dans la croissance de nanoparticules. Ce projet utilise un réseau de neurones U-Net (PyTorch) pour la segmentation sémantique, couplé à des techniques de traitement d'images avancées pour la segmentation d'instance et l'analyse statistique.
 
-Ce projet est structuré pour être facilement utilisable et extensible, idéal pour la recherche et comme projet de portfolio. Il inclut un générateur de données synthétiques pour permettre de tester l'intégralité du pipeline sans avoir besoin de données expérimentales.
+Le but est de passer d'une image de microscope bruitée à une analyse quantitative complète des particules observées.
 
 ## Fonctionnalités
-- Architecture U-Net : Implémentation robuste et standard en PyTorch.
+- Segmentation Sémantique : Utilise une architecture U-Net robuste pour générer des masques binaires (particules vs fond).
 
-- Générateur de Données Synthétiques : Un script pour créer un jeu de données de démonstration.
+- Segmentation d'Instance : Implémente l'algorithme Watershed pour séparer avec précision les particules qui se touchent ou s'agglomèrent.
 
-- Double Tâche : Le modèle peut être entraîné pour le débruitage ou la segmentation binaire.
+- Analyse Quantitative : Un script d'analyse complet (analysis.py) pour extraire des métriques clés pour chaque particule détectée :
 
-- Gestion des Données : Utilitaire Dataset personnalisé pour charger efficacement les données de microscopie.
+ - Aire et périmètre.
 
-- Augmentation de Données : Utilise albumentations pour améliorer la robustesse du modèle.
+ - Diamètre équivalent.
 
-- Scripts Modulaires : Scripts séparés et clairs pour l'entraînement (train.py) et l'inférence (predict.py).
+ - Estimation de volume 3D (en supposant une géométrie sphérique).
+
+ - Indice de circularité pour l'analyse de forme.
+
+- Rapports et Visualisations : Génère automatiquement un rapport statistics.csv et des graphiques de distribution (taille, aire...).
+
+- Générateur de Données Synthétiques : Inclut un script pour créer un jeu de données de test avec des particules qui se chevauchent.
 
 ## Structure du Projet
 
 NanoGrowth-UNet/
 │
-├── data/
-│   ├── train/
-│   │   ├── images/
-│   │   └── masks/
-│   └── val/
-│       ├── images/
-│       └── masks/
+├── data/                     # Données d'entraînement et de validation
+├── models/                   # Architecture U-Net
+├── notebooks/                # Notebook d'exploration
+├── results/                  # Dossier pour les résultats d'analyse (rapports, graphiques)
+├── utils/                    # Utilitaires (Dataset, transforms)
 │
-├── models/
-│   └── unet.py
-│
-├── notebooks/
-│   └── 1_data_exploration.ipynb
-│
-├── utils/
-│   ├── dataset.py
-│   └── transforms.py
-│
-├── saved_models/
-│
-├── generate_synthetic_data.py  <-- NOUVEAU
-├── train.py
-├── predict.py
+├── generate_synthetic_data.py # Script pour créer des données de test
+├── train.py                  # Script pour entraîner le modèle U-Net
+├── predict.py                # Script pour la segmentation binaire
+├── analysis.py               # NOUVEAU: Script pour l'analyse quantitative
 ├── requirements.txt
 └── README.md
 
@@ -106,3 +99,36 @@ python predict.py --model saved_models/best_model.pth --input /chemin/vers/votre
 # Lancer la prédiction sur un dossier d'images (ex: les images de validation synthétiques)
 python predict.py --model saved_models/best_model.pth --input data/val/images/ --output results/
 '''
+
+À ce stade, predicted_masks/ contient des images en noir et blanc où toutes les particules sont fusionnées.
+
+4. Analyse Quantitative
+C'est ici que la nouvelle fonctionnalité prend tout son sens. Lancez le script d'analyse sur les masques que vous venez de générer.
+
+'''
+python analysis.py --input predicted_masks/ --output results/
+'''
+
+Ce que fait ce script :
+
+- Pour chaque masque binaire, il sépare les particules collées (segmentation d'instance).
+
+- Il sauvegarde une version colorée de cette segmentation dans results/.
+
+- Il calcule les statistiques pour chaque particule dans chaque image.
+
+- Il compile tout dans un fichier results/statistics.csv.
+
+- Il génère des graphiques de distribution (area_distribution.png, etc.) dans results/.
+
+## Améliorations Futures Possibles
+
+Voici quelques pistes pour aller encore plus loin :
+
+- Tracking Temporel : Analyser la séquence vidéo complète pour suivre les particules individuelles au fil du temps, mesurer leur vitesse de croissance, et détecter les événements de fusion.
+
+- Modèles d'Instance Segmentation End-to-End : Remplacer le pipeline U-Net + Watershed par un modèle plus avancé comme Mask R-CNN ou StarDist, qui sont spécifiquement conçus pour la segmentation d'instance et peuvent donner de meilleurs résultats.
+
+- Classification de Formes : Utiliser les métriques de forme (circularité, ellipticité) pour entraîner un petit classifieur (ex: SVM, Random Forest) capable de catégoriser automatiquement les particules (sphérique, bâtonnet, agrégat...).
+
+- Interface Utilisateur : Développer une interface graphique simple (avec Gradio ou Streamlit) pour permettre de charger une image et d'obtenir la segmentation et l'analyse de manière interactive.
