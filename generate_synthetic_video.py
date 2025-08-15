@@ -9,8 +9,8 @@ from tqdm import tqdm
 class Particle:
     """A class to represent a single synthetic particle with various shapes and dynamics."""
     def __init__(self, x, y, max_x, max_y):
-        self.x = int(x)
-        self.y = int(y)
+        self.x = x # Keep as float for precise movement
+        self.y = y # Keep as float for precise movement
         self.max_x = max_x
         self.max_y = max_y
         
@@ -34,18 +34,21 @@ class Particle:
 
     def draw(self, frame):
         """Draw the particle on the frame based on its shape."""
+        # --- CORRECTION: Convert float coordinates to int for all drawing functions ---
+        center = (int(self.x), int(self.y))
+
         if self.shape == 'spherical':
-            cv2.circle(frame, (self.x, self.y), int(self.size), self.intensity, -1)
+            cv2.circle(frame, center, int(self.size), self.intensity, -1)
         elif self.shape == 'ellipse':
             axes = (int(self.size * 1.5), int(self.size))
-            cv2.ellipse(frame, (self.x, self.y), axes, self.angle, 0, 360, self.intensity, -1)
+            cv2.ellipse(frame, center, axes, self.angle, 0, 360, self.intensity, -1)
         elif self.shape == 'nanorod':
             axes = (int(self.size * 2.5), int(self.size / 2))
-            cv2.ellipse(frame, (self.x, self.y), axes, self.angle, 0, 360, self.intensity, -1)
+            cv2.ellipse(frame, center, axes, self.angle, 0, 360, self.intensity, -1)
         elif self.shape == 'cube':
             half_size = int(self.size / np.sqrt(2))
-            rect_points = cv2.boxPoints(((self.x, self.y), (half_size*2, half_size*2), self.angle))
-            cv2.fillPoly(frame, [np.int0(rect_points)], self.intensity)
+            rect_points = cv2.boxPoints((center, (half_size*2, half_size*2), self.angle))
+            cv2.fillPoly(frame, [np.int32(rect_points)], self.intensity)
         elif self.shape == 'triangle':
             half_size = int(self.size)
             points = np.array([
@@ -55,7 +58,7 @@ class Particle:
             ])
             rot_matrix = cv2.getRotationMatrix2D((0,0), self.angle, 1)
             rotated_points = (rot_matrix[:, :2] @ points.T).T
-            translated_points = np.int0(rotated_points + [self.x, self.y])
+            translated_points = np.int32(rotated_points + center)
             cv2.fillPoly(frame, [translated_points], self.intensity)
         elif self.shape == 'icosahedron': # Approximated as a hexagon in 2D
             half_size = int(self.size)
@@ -66,7 +69,7 @@ class Particle:
             ])
             rot_matrix = cv2.getRotationMatrix2D((0,0), self.angle, 1)
             rotated_points = (rot_matrix[:, :2] @ points.T).T
-            translated_points = np.int0(rotated_points + [self.x, self.y])
+            translated_points = np.int32(rotated_points + center)
             cv2.fillPoly(frame, [translated_points], self.intensity)
 
     def update(self):
