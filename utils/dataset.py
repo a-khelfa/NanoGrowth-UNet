@@ -1,0 +1,59 @@
+# -*- coding: utf-8 -*-
+
+# utils/dataset.py
+# This file defines the custom Dataset for loading and preprocessing data.
+
+import os
+from PIL import Image
+from torch.utils.data import Dataset
+import numpy as np
+
+class NanoparticleDataset(Dataset):
+    def __init__(self, image_dir, mask_dir, transform=None):
+        """
+        Args:
+            image_dir (str): Directory with all the images.
+            mask_dir (str): Directory with all the masks.
+            transform (callable, optional): Optional transform to be applied on a sample.
+        """
+        self.image_dir = image_dir
+        self.mask_dir = mask_dir
+        self.transform = transform
+        # Ensure we only take files and handle potential hidden files
+        self.images = [f for f in os.listdir(image_dir) if os.path.isfile(os.path.join(image_dir, f)) and not f.startswith('.')]
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, index):
+        # Construct full paths for image and mask
+        img_name = self.images[index]
+        img_path = os.path.join(self.image_dir, img_name)
+        mask_path = os.path.join(self.mask_dir, img_name) # Assumes mask has the same name
+
+        # Open image and mask
+        try:
+            # Open as grayscale ('L') and convert to numpy array
+            image = np.array(Image.open(img_path).convert("L"), dtype=np.float32)
+            mask = np.array(Image.open(mask_path).convert("L"), dtype=np.float32)
+        except FileNotFoundError:
+            print(f"Warning: Mask not found for image {img_name}. Skipping.")
+            # This is a simple way to handle it. A better way might be to filter lists at init.
+            return self.__getitem__((index + 1) % len(self))
+        except Exception as e:
+            print(f"Error loading image or mask {img_name}: {e}")
+            return self.__getitem__((index + 1) % len(self))
+
+
+        # Normalize mask to be binary (0 or 1)
+        # This is crucial for binary segmentation
+        mask[mask == 255.0] = 1.0
+        mask[mask != 1.0] = 0.0
+
+        # Apply transformations if any
+        if self.transform:
+            augmentations = self.transform(image=image, mask=mask)
+            image = augmentations["image"]
+            mask = augmentations["mask"]
+
+        return image, mask
